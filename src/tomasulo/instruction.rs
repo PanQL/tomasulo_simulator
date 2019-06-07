@@ -1,7 +1,7 @@
 use std::fmt;
 
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum InstructionType {
     ADD,
     SUB,
@@ -33,15 +33,15 @@ impl Instruction {
     }
 
     pub fn get_reg1(&self) -> Option<u8> {
-        return Some(self.reg1);
+        return Some(self.reg1.clone());
     }
 
     pub fn get_reg2(&self) -> Option<u8> {
         match self._type {
-            InstructionType::ADD => { return Some(self.reg2); }
-            InstructionType::SUB => { return Some(self.reg2); }
-            InstructionType::MUL => { return Some(self.reg2); }
-            InstructionType::DIV => { return Some(self.reg2); }
+            InstructionType::ADD => { return Some(self.reg2.clone()); }
+            InstructionType::SUB => { return Some(self.reg2.clone()); }
+            InstructionType::MUL => { return Some(self.reg2.clone()); }
+            InstructionType::DIV => { return Some(self.reg2.clone()); }
             InstructionType::LD => { return None; }
             InstructionType::JUMP => { return None; }
         };
@@ -49,10 +49,10 @@ impl Instruction {
 
     pub fn get_reg3(&self) -> Option<u8> {
         match self._type {
-            InstructionType::ADD => { return Some(self.reg3); }
-            InstructionType::SUB => { return Some(self.reg3); }
-            InstructionType::MUL => { return Some(self.reg3); }
-            InstructionType::DIV => { return Some(self.reg3); }
+            InstructionType::ADD => { return Some(self.reg3.clone()); }
+            InstructionType::SUB => { return Some(self.reg3.clone()); }
+            InstructionType::MUL => { return Some(self.reg3.clone()); }
+            InstructionType::DIV => { return Some(self.reg3.clone()); }
             InstructionType::LD => { return None; }
             InstructionType::JUMP => { return None; }
         };
@@ -64,8 +64,8 @@ impl Instruction {
             InstructionType::SUB => { return None; }
             InstructionType::MUL => { return None; }
             InstructionType::DIV => { return None; }
-            InstructionType::LD => { return Some(self.num1); }
-            InstructionType::JUMP => { return Some(self.num1); }
+            InstructionType::LD => { return Some(self.num1.clone()); }
+            InstructionType::JUMP => { return Some(self.num1.clone()); }
         };
     }
 
@@ -76,7 +76,7 @@ impl Instruction {
             InstructionType::MUL => { return None; }
             InstructionType::DIV => { return None; }
             InstructionType::LD => { return None; }
-            InstructionType::JUMP => { return Some(self.num2); }
+            InstructionType::JUMP => { return Some(self.num2.clone()); }
         };
     }
 }

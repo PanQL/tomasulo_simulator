@@ -1,8 +1,10 @@
 use super::instruction::InstructionType;
+use super::display::ReservedStationDisplay;
 use std::sync::Arc;
 use std::cell::RefCell;
+use std::boxed::Box;
+use std::fmt;
 
-#[derive(Debug)]
 pub struct ReservedStation {
     busy : bool, // 是否正在使用
     calculating : bool, // 是否正在计算
@@ -10,12 +12,21 @@ pub struct ReservedStation {
     source1 : Option<u32>,
     source2 : Option<u32>,
     waiters : Vec<(Arc<RefCell<ReservedStation>>, u8)>,    // 正在等待该保留站的各个保留站
-    target : usize, // 要写入的结果寄存器
+    pub target : usize, // 要写入的结果寄存器
     pc_result : Option<u32>, // 当指令为jump指令时，可能需要写入pc寄存器的值
+    pub ui : Box<dyn ReservedStationDisplay>,
+    pub name : &'static str,
+}
+
+impl fmt::Debug for ReservedStation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "busy : {:?}, calculating : {:?}, type : {:?}, source1 : {:?}, source2 : {:?} ",
+                 self.busy, self.calculating, self.op_type, self.source1, self.source2)
+    }
 }
 
 impl ReservedStation {
-    pub fn new(_type : InstructionType) -> Self{ ReservedStation{
+    pub fn new(_type : InstructionType, ui : Box<dyn ReservedStationDisplay>, name : &'static str) -> Self{ ReservedStation{
             busy : false, 
             calculating : false, 
             op_type : _type, 
@@ -24,11 +35,13 @@ impl ReservedStation {
             waiters : Vec::new(), 
             target : 0, 
             pc_result : None,
+            ui,
+            name,
         }
     }
 
     pub fn is_busy(&self) -> bool {
-        self.busy
+        self.busy.clone()
     }
 
     pub fn set_busy(&mut self) {
@@ -36,7 +49,7 @@ impl ReservedStation {
     }
 
     pub fn is_calculating(&self) -> bool {
-        self.calculating
+        self.calculating.clone()
     }
 
     pub fn set_calculating(&mut self) {
@@ -44,11 +57,26 @@ impl ReservedStation {
     }
 
     pub fn set_source(&mut self, idx : u8, source : u32) {  // 将操作数拷贝到保留站对应位置
-        if idx == 1 { self.source1 = Some(source) } else { self.source2 = Some(source) };
+        if idx == 1 {
+            self.ui.show_vj(Some(&source));
+            self.ui.show_qj("");
+            self.source1 = Some(source);
+        } else {
+            if self.op_type == InstructionType::DIV && source == 0 {
+                let new_source = source + 1;
+                self.ui.show_vk(Some(&new_source));
+                self.ui.show_qk("");
+                self.source2 = Some(new_source);
+                return;
+            }
+            self.ui.show_vk(Some(&source));
+            self.ui.show_qk("");
+            self.source2 = Some(source);
+        };
     }
 
     pub fn get_type(&self) -> InstructionType {
-        self.op_type
+        self.op_type.clone()
     }
 
     pub fn set_type(&mut self , _type : InstructionType) {
@@ -85,6 +113,7 @@ impl ReservedStation {
         self.calculating = false;
         self.source1 = None;
         self.source2 = None;
+        self.ui.clear();
 
         self.target.clone()
     }

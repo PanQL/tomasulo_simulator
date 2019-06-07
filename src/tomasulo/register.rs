@@ -2,10 +2,14 @@ use std::sync::Arc;
 use std::fmt;
 use std::cell::RefCell;
 use super::reserved_station::ReservedStation;
+use crate::gtk::TextViewExt;
+use crate::gtk::TextBufferExt;
 
 pub struct Register {
     value : u32,
     writer : Option<Arc<RefCell<ReservedStation>>>,
+    text : gtk::TextView,
+    pub writer_name : Option<&'static str>,
 }
 
 impl fmt::Debug for Register {
@@ -15,10 +19,12 @@ impl fmt::Debug for Register {
 }
 
 impl Register {
-    pub fn new() -> Self{
+    pub fn new(text : gtk::TextView) -> Self{
         Register{
             value : 0, 
             writer : None,
+            text,
+            writer_name : None,
         }
     }
 
@@ -26,6 +32,7 @@ impl Register {
         self.value = value;
         if self.writer.is_some() {
             self.writer = None;
+            self.writer_name = None;
         }
     }
 
@@ -34,7 +41,7 @@ impl Register {
     }
 
     pub fn get_value(&self) -> u32 {
-        self.value
+        self.value.clone()
     }
 
     pub fn set_value_purlly(&mut self, value : u32 ) {
@@ -47,15 +54,19 @@ impl Register {
         }
     }
 
-    pub fn get_writer(&self) -> Option<Arc<RefCell<ReservedStation>>> {
-        self.writer.clone()
-    }
-
     pub fn set_writer(&mut self, writer : Arc<RefCell<ReservedStation>> ) {
         self.writer = Some(writer);
     }
 
     pub fn clear_writer(&mut self) {
         self.writer = None;
+    }
+
+    pub fn show(&self) {
+        if self.writer_name.is_some() {
+            self.text.get_buffer().expect("failed to get buffer").set_text(self.writer_name.unwrap());
+        } else {
+            self.text.get_buffer().expect("failed to get buffer").set_text(&*self.value.to_string());
+        }
     }
 }

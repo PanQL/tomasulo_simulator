@@ -1,29 +1,29 @@
 use super::reserved_station::ReservedStation;
 use super::instruction::InstructionType;
+use super::display::CalculatorDisplay;
 use std::sync::Arc;
 use std::cell::RefCell;
 
-#[derive(Debug)]
 pub struct Calculator {
-    id : u8,
     busy : bool, // 是否正在使用
     times : u32, // 剩余计算周期
     op_type : InstructionType, // 计算类型
     s1 : u32, // 操作数1
     s2 : u32, // 操作数2
     station : Option<Arc<RefCell<ReservedStation>>>,    // 对应的保留站
+    pub ui : Box<dyn CalculatorDisplay>,
 }
 
 impl Calculator {
-    pub fn new(id : u8, _type : InstructionType) -> Self{
+    pub fn new(_type : InstructionType, ui : Box<dyn CalculatorDisplay>) -> Self{
         Calculator {
-            id,
             busy : false,
             times : 0,
             op_type : _type,
             s1 : 0,
             s2 : 0,
             station : None,
+            ui,
         }
     }
 
@@ -38,6 +38,7 @@ impl Calculator {
             return self.write_back();
         } else {
             self.times -= 1;
+            self.ui.show_times(&self.times);
             return None;
         }
     }
@@ -55,8 +56,7 @@ impl Calculator {
         let ret;
         if let Some(station) = &self.station {
             let mut rs = station.borrow_mut();
-            let position = rs.write_back(res);
-            println!("s1 : {:?} s2 : {:?} pos : {}", self.s1, self.s2, position);
+            let position = rs.write_back(res.clone());
             match self.op_type {
                 InstructionType::JUMP => {
                     ret = if self.s1 == self.s2 {
@@ -73,6 +73,7 @@ impl Calculator {
             ret =  None;
         }
         self.station = None;
+        self.ui.clear();
         ret
     }
 
@@ -88,7 +89,14 @@ impl Calculator {
             InstructionType::JUMP => 1,
         };
         self.s1 = source1;
-        self.s2 = source2;
+        self.s2 = match self.op_type {
+            InstructionType::DIV => if source2 == 0 { 1 } else { source2 }
+            _ => source2
+        };
+        self.ui.show_times(&self.times);
+        self.ui.set_op(self.op_type);
+        self.ui.show_src1(&self.s1);
+        self.ui.show_src2(&self.s2);
     }
 
     pub fn set_station(&mut self, station : Arc<RefCell<ReservedStation>> ) {

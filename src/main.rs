@@ -1,43 +1,35 @@
 mod tomasulo;
 
-use std::env;
-use std::io;
-use std::io::Write;
-use std::io::stdout;
-
-
 pub use tomasulo::TomasuloSimulator;
 
+use std::env;
+
+extern crate gio;
+extern crate gtk;
+
+use gtk::prelude::*;
+use gtk::{
+    ApplicationWindow, Builder, Button,
+};
+use std::cell::RefCell;
+use std::sync::Arc;
+
 fn main() {
+    gtk::init().unwrap();
+    let glade_src = include_str!("test_ui.glade");
+    let builder = Builder::new_from_string(glade_src);
+
+    let window: ApplicationWindow = builder.get_object("app_window").expect("Couldn't get window");
+    let step: Button = builder.get_object("step").expect("Couldn't get button1");
+
+    let mut tomasulo = TomasuloSimulator::new(builder);
     let args : Vec<String> = env::args().collect();
-    let mut simulator = TomasuloSimulator::new();
-    simulator.load_nel(&args[1]);
-    loop{
-        print!("\n");
-        stdout().flush();
-        let mut buf = String::new();
-        io::stdin().read_line(&mut buf)
-            .expect("Failed to read a line");
+    tomasulo.load_nel(&args[1]);
 
-        let s : &str = if buf.ends_with("\n") {
-            &buf[0..buf.len() - 1] 
-        } else {
-            &buf
-        };
-
-        match s {
-            "s" => {
-                simulator.step();
-            }
-            "q" => {
-                break;
-            }
-            "show" => {
-                simulator.show();
-            }
-            _ => {
-                println!("fault instruction {} ", s);
-            }
-        }
-    }
+    let simulator = Arc::new(RefCell::new(tomasulo));
+    step.connect_clicked(move |_| {
+       simulator.borrow_mut().step();
+    });
+    window.show_all();
+    gtk::main();
 }
