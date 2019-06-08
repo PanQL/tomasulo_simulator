@@ -13,13 +13,15 @@ use std::boxed::Box;
 pub use instruction::*;
 use register::Register;
 use calculator::Calculator;
-use reserved_station::ReservedStation;
+use reserved_station::{ ReservedStation, RsState };
 use display::*;
 
 extern crate gio;
 extern crate gtk;
 
 use gtk::Builder;
+use crate::gtk::TextViewExt;
+use crate::gtk::TextBufferExt;
 
 
 pub struct TomasuloSimulator {
@@ -33,6 +35,8 @@ pub struct TomasuloSimulator {
     rs_multers : [Arc<RefCell<ReservedStation>>; 3],
     loaders : [Calculator; 2],
     rs_loaders : [Arc<RefCell<ReservedStation>>; 3],
+    write_back_list : Vec<(usize, u32, &'static str)>,
+    cycle : gtk::TextView,
 }
 
 impl TomasuloSimulator {
@@ -266,6 +270,8 @@ impl TomasuloSimulator {
                 Arc::new(RefCell::new(ReservedStation::new(InstructionType::LD, loader_rs2, "LoderBuffer2"))),
                 Arc::new(RefCell::new(ReservedStation::new(InstructionType::LD, loader_rs3, "LoderBuffer3"))),
             ],
+            write_back_list : Vec::new(),
+            cycle : builder.get_object("cycle").expect("Could not get cycle"),
         }
     }
 
@@ -388,12 +394,11 @@ impl TomasuloSimulator {
                 unimplemented!()
             }
         };
-        if !rs.is_busy() {  // 有可用的保留站
+        if rs.state == RsState::FREE {  // 有可用的保留站
             rs.ui.set_op(_type);
             // 第一个操作数
             let source1 = self.inst_vec[pc_id].get_reg2().unwrap() as usize;
             if self.registers[source1].is_waiting() {  // 当前源寄存器被锁定
-//                self.registers[source1].register_rs(1, self.rs_adders[rs_id].clone());
                 self.registers[source1].register_rs(1, rs_ref.clone());
                 rs.ui.show_vj(None);
                 let name = self.registers[source1].writer_name.as_ref().unwrap();
@@ -405,7 +410,6 @@ impl TomasuloSimulator {
             // 第二个操作数
             let source2 = self.inst_vec[pc_id].get_reg3().unwrap() as usize;
             if self.registers[source2].is_waiting() {  // 当前源寄存器被锁定
-//                self.registers[source2].register_rs(2, self.rs_adders[rs_id].clone());
                 self.registers[source2].register_rs(2, rs_ref.clone());
                 rs.ui.show_vk(None);
                 let name = self.registers[source2].writer_name.as_ref().unwrap();
@@ -418,11 +422,10 @@ impl TomasuloSimulator {
             rs.set_target(target);
 
             rs.set_type(self.inst_vec[pc_id].get_type());
-            rs.set_busy();
-            self.registers[0]
-                .set_value_purlly(pc_id as u32 + 1);
-            self.registers[target as usize]
-                .set_writer(self.rs_adders[rs_id].clone());
+            rs.state = RsState::BUSY;
+            rs.ui.show_busy(true);
+            self.registers[0].set_value_purlly(pc_id as u32 + 1);
+            self.registers[target as usize].set_writer(rs_ref.clone());
             self.registers[target as usize].writer_name = Some(rs.name);
             return true;
         }
@@ -432,35 +435,58 @@ impl TomasuloSimulator {
     pub fn step(&mut self) {
         self.times += 1;
 
+        for (pos, res, name) in self.write_back_list.iter() {
+            if !(self.registers[*pos].writer_name.unwrap() == *name) { continue; }
+            if ( *pos == 0 ) && ( *res == 0xFFFF_FFFF ) {
+                self.registers[0].clear_writer();
+                continue;
+            }
+            self.registers[*pos].set_value(*res);
+        }
+        self.write_back_list.clear();
+        for i in 0..6 {
+            let mut rs = self.rs_adders[i].borrow_mut();
+            if rs.state == RsState::CALCULATED {
+                rs.refresh();
+            }
+        }
+        for i in 0..3 {
+            let mut rs = self.rs_multers[i].borrow_mut();
+            if rs.state == RsState::CALCULATED {
+                rs.refresh();
+            }
+        }
+        for i in 0..3 {
+            let mut rs = self.rs_loaders[i].borrow_mut();
+            if rs.state == RsState::CALCULATED {
+                rs.refresh();
+            }
+        }
+
         // 步进运算部件
         for i in 0..3 {
-            if let Some((pos, res)) = self.adders[i].step() {
-                if ( pos == 0 ) && ( res == 0xFFFF_FFFF ) {
-                    self.registers[0].clear_writer();
-                    continue;
-                }
-                self.registers[pos].set_value(res);
+            if let Some(info) = self.adders[i].step() {
+                self.write_back_list.push(info);
             }
         }
         for i in 0..2 {
-            //self.multers[i].step();
-            if let Some((pos, res)) = self.multers[i].step() {
-                self.registers[pos].set_value(res);
+            if let Some(info) = self.multers[i].step() {
+                self.write_back_list.push(info);
             }
         }
         for i in 0..2 {
-            //self.loaders[i].step();
-            if let Some((pos, res)) = self.loaders[i].step() {
-                self.registers[pos].set_value(res);
+            if let Some(info) = self.loaders[i].step() {
+                self.write_back_list.push(info);
             }
         }
 
         // 如果有空闲保留站与当前需要发射的指令相符，则发射一条指令
         println!("current cycle : {}", self.times);
+        self.cycle.get_buffer().expect("").set_text(&*self.times.to_string());
         if !self.registers[0].is_waiting() {
             let pc_id = self.registers[0].get_value() as usize;
-            println!("pc is {} {:?}", pc_id, self.inst_vec[pc_id]);
-            if ! (pc_id == (self.inst_vec.len() - 1)) {
+            println!("pc is {}", pc_id);
+            if pc_id < self.inst_vec.len() {
                 let _type = self.inst_vec[pc_id].get_type();
                 match _type {
                     InstructionType::ADD | InstructionType::SUB => {
@@ -476,14 +502,16 @@ impl TomasuloSimulator {
                     InstructionType::LD => {
                         for i in 0..3 {
                             let mut rs = self.rs_loaders[i].borrow_mut();
-                            if !rs.is_busy() {
+                            //if !rs.is_busy() {
+                            if rs.state == RsState::FREE {
                                 let number1 = self.inst_vec[pc_id].get_num1().unwrap();
                                 rs.set_source(1, number1);
 
                                 let target = self.inst_vec[pc_id].get_reg1().unwrap() as usize;
                                 rs.set_target(target);
 
-                                rs.set_busy();
+                                //rs.set_busy();
+                                rs.state = RsState::BUSY;
                                 rs.ui.show_busy(true);
                                 self.registers[0]
                                     .set_value_purlly(pc_id as u32 + 1);
@@ -497,7 +525,8 @@ impl TomasuloSimulator {
                     InstructionType::JUMP => {
                         for i in 0..6 {
                             let mut rs = self.rs_adders[i].borrow_mut();
-                            if !rs.is_busy() {  // 有可用的保留站
+                            //if !rs.is_busy() {  // 有可用的保留站
+                            if rs.state == RsState::FREE {
                                 rs.ui.set_op(self.inst_vec[pc_id].get_type());
                                 // 第一个操作数
                                 let source1 = self.inst_vec[pc_id].get_num1().unwrap();
@@ -516,6 +545,7 @@ impl TomasuloSimulator {
                                 // 跳转的偏移
                                 let number = self.inst_vec[pc_id].get_num2().unwrap();
                                 let new_pc = ( pc_id as i32 + number as i32) as u32;
+                                println!("new pc : {}", new_pc);
                                 rs.set_pc_result(new_pc);
 
                                 rs.set_target(0);
@@ -526,7 +556,9 @@ impl TomasuloSimulator {
                                 self.registers[0].writer_name = Some(rs.name);
 
                                 rs.set_type(self.inst_vec[pc_id].get_type());
-                                rs.set_busy();
+                                //rs.set_busy();
+                                rs.state = RsState::BUSY;
+                                rs.ui.show_busy(true);
                                 break;
                             }
                         }
@@ -538,7 +570,7 @@ impl TomasuloSimulator {
         // 遍历保留站，执行可以执行的指令
         for i in 0..6 {
             let mut rs = self.rs_adders[i].borrow_mut();
-            if rs.is_busy() && !rs.is_calculating() {
+            if rs.state == RsState::BUSY {
                 if let Some((s1, s2)) = rs.get_all_source() {
                     for j in 0..3 {
                         if !self.adders[j].is_busy() {  // 发现空闲运算加法器
@@ -547,7 +579,7 @@ impl TomasuloSimulator {
                             );
                             self.adders[j].set_station(self.rs_adders[i].clone());
                             self.adders[j].ui.show_target(&rs.target);
-                            rs.set_calculating();
+                            rs.state = RsState::CALCULATING;
                             break;
                         }
                     }
@@ -556,7 +588,7 @@ impl TomasuloSimulator {
         }
         for i in 0..3 {
             let mut rs = self.rs_multers[i].borrow_mut();
-            if rs.is_busy() && !rs.is_calculating() {
+            if rs.state == RsState::BUSY {
                 if let Some((s1, s2)) = rs.get_all_source() {
                     for j in 0..2 {
                         if !self.multers[j].is_busy() {
@@ -565,7 +597,7 @@ impl TomasuloSimulator {
                             );
                             self.multers[j].set_station(self.rs_multers[i].clone());
                             self.multers[j].ui.show_target(&rs.target);
-                            rs.set_calculating();
+                            rs.state = RsState::CALCULATING;
                             break;
                         }
                     }
@@ -574,7 +606,7 @@ impl TomasuloSimulator {
         }
         for i in 0..3 {
             let mut rs = self.rs_loaders[i].borrow_mut();
-            if rs.is_busy() && !rs.is_calculating() {
+            if rs.state == RsState::BUSY {
                 if let Some((s1, _)) = rs.get_all_source() {
                     for j in 0..2 {
                         if !self.loaders[j].is_busy() {
@@ -583,7 +615,7 @@ impl TomasuloSimulator {
                             );
                             self.loaders[j].set_station(self.rs_loaders[i].clone());
                             self.loaders[j].ui.show_target(&rs.target);
-                            rs.set_calculating();
+                            rs.state = RsState::CALCULATING;
                             break;
                         }
                     }
@@ -591,21 +623,9 @@ impl TomasuloSimulator {
             }
         }
 
-        for i in 0..6 {
-            print!("{:?} \n", self.rs_adders[i]);
-        }
-        for i in 0..3 {
-            print!("{:?} \n", self.rs_multers[i]);
-        }
-        for i in 0..3 {
-            print!("{:?} \n", self.rs_loaders[i]);
-        }
         self.show_ui();
     }
 
     pub fn show(&self) {
-//        print!("{:?}", self.adders);
-//        print!("{:?}", self.multers);
-//        print!("{:?}", self.loaders);
     }
 }

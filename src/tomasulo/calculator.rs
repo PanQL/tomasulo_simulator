@@ -31,19 +31,19 @@ impl Calculator {
         self.busy
     }
 
-    pub fn step(&mut self) -> Option<(usize, u32)>{
+    pub fn step(&mut self) -> Option<(usize, u32, &'static str)>{
         if !self.busy { return None; }
+        self.times -= 1;
         if self.times == 0 {    // 写回结束
             self.busy = false;
             return self.write_back();
         } else {
-            self.times -= 1;
             self.ui.show_times(&self.times);
             return None;
         }
     }
 
-    fn write_back(&mut self) -> Option<(usize, u32)> {
+    fn write_back(&mut self) -> Option<(usize, u32, &'static str)> {
         let res : u32 = match self.op_type {
             InstructionType::ADD => { self.s1 + self.s2 }
             InstructionType::SUB => { self.s1 - self.s2 }
@@ -60,13 +60,13 @@ impl Calculator {
             match self.op_type {
                 InstructionType::JUMP => {
                     ret = if self.s1 == self.s2 {
-                        Some((position, rs.get_pc_result().unwrap()))
+                        Some((position, rs.get_pc_result().unwrap(), rs.name))
                     } else {
-                        Some((position, 0xFFFF_FFFF))
+                        Some((position, 0xFFFF_FFFF, rs.name))
                     };
                 }
                 _ => {
-                    ret =  Some((position, res));
+                    ret =  Some((position, res, rs.name));
                 }
             }
         } else {
@@ -83,8 +83,10 @@ impl Calculator {
         self.times = match self.op_type {
             InstructionType::ADD => 3,
             InstructionType::SUB => 3,
-            InstructionType::MUL => 12,
-            InstructionType::DIV => 40,
+//            InstructionType::MUL => 12,
+            InstructionType::MUL => 4,
+//            InstructionType::DIV => 40,
+            InstructionType::DIV => if source2 == 0 { 1 } else { 4 },
             InstructionType::LD => 3,
             InstructionType::JUMP => 1,
         };
