@@ -83,10 +83,8 @@ impl Calculator {
         self.times = match self.op_type {
             InstructionType::ADD => 3,
             InstructionType::SUB => 3,
-//            InstructionType::MUL => 12,
-            InstructionType::MUL => 4,
-//            InstructionType::DIV => 40,
-            InstructionType::DIV => if source2 == 0 { 1 } else { 4 },
+            InstructionType::MUL => 12,
+            InstructionType::DIV => if source2 == 0 { 1 } else { 40 },
             InstructionType::LD => 3,
             InstructionType::JUMP => 1,
         };

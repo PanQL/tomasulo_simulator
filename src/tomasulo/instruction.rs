@@ -18,12 +18,15 @@ pub struct Instruction {
     pub reg3 : u8,
     pub num1 : u32,
     pub num2 : u32,
+    pub e_time : Option<u32>,   // 发射周期
+    pub r_time : Option<u32>,   // 运行结束周期
+    pub w_time : Option<u32>,   // 写回周期
 }
 
 impl fmt::Debug for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "_type : {:?} register1 : {} register2 : {} register3 : {}  number1 : {:#x} number2 : {:#x} ", 
-               self._type, self.reg1, self.reg2, self.reg3, self.num1, self.num2)
+        writeln!(f, "_type : {:?} ,e_time : {:?} r_time : {:?} w_time : {:?}", 
+               self._type, self.e_time, self.r_time, self.w_time)
     }
 }
 

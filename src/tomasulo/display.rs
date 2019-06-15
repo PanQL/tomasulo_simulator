@@ -50,7 +50,7 @@ impl ReservedStationDisplay for LoaderBufferUi {
 
     fn show_vj(&self, vj: Option<&u32>) {
         if vj.is_some() {
-            self.value.get_buffer().expect("failed to get load value").set_text(&*vj.unwrap().to_string());
+            self.value.get_buffer().expect("failed to get load value").set_text(&*(*vj.unwrap() as i32).to_string());
         } else {
             self.value.get_buffer().expect("failed to get load value").set_text("");
         }
@@ -94,7 +94,7 @@ impl ReservedStationDisplay for CalculatorRsUi {
 
     fn show_vj(&self, vj: Option<&u32>) {
         if vj.is_some() {
-            self.vj.get_buffer().expect("failed to get load value").set_text(&*vj.unwrap().to_string());
+            self.vj.get_buffer().expect("failed to get load value").set_text(&*(*vj.unwrap() as i32).to_string());
         } else {
             self.vj.get_buffer().expect("failed to get load value").set_text("");
         }
@@ -102,7 +102,7 @@ impl ReservedStationDisplay for CalculatorRsUi {
 
     fn show_vk(&self, vk: Option<&u32>) {
         if vk.is_some() {
-            self.vk.get_buffer().expect("failed to get load value").set_text(&*vk.unwrap().to_string());
+            self.vk.get_buffer().expect("failed to get load value").set_text(&*(*vk.unwrap() as i32).to_string());
         } else {
             self.vk.get_buffer().expect("failed to get load value").set_text("");
         }
@@ -150,7 +150,7 @@ impl CalculatorDisplay for LoaderUi {
     }
 
     fn show_src1(&self, src1: &u32) {
-        self.value.get_buffer().expect("failed to get load buffer").set_text(&*src1.to_string());
+        self.value.get_buffer().expect("failed to get load buffer").set_text(&*(*src1 as i32).to_string());
     }
 
     fn show_src2(&self, _ : &u32) {
@@ -185,11 +185,11 @@ impl CalculatorDisplay for CalculatorUi {
     }
 
     fn show_src1(&self, src1: &u32) {
-        self.value1.get_buffer().expect("failed to get load buffer").set_text(&*src1.to_string());
+        self.value1.get_buffer().expect("failed to get load buffer").set_text(&*(*src1 as i32).to_string());
     }
 
     fn show_src2(&self, src2: &u32) {
-        self.value2.get_buffer().expect("failed to get load buffer").set_text(&*src2.to_string());
+        self.value2.get_buffer().expect("failed to get load buffer").set_text(&*(*src2 as i32).to_string());
     }
 
     fn show_target(&self, target: &usize) {

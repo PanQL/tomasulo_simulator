@@ -54,19 +54,21 @@ impl Register {
         }
     }
 
-    pub fn set_writer(&mut self, writer : Arc<RefCell<ReservedStation>> ) {
+    pub fn set_writer(&mut self, writer : Arc<RefCell<ReservedStation>>, writer_name : &'static str ) {
         self.writer = Some(writer);
+        self.writer_name = Some(writer_name);
     }
 
     pub fn clear_writer(&mut self) {
         self.writer = None;
+        self.writer_name = None;
     }
 
     pub fn show(&self) {
         if self.writer_name.is_some() {
             self.text.get_buffer().expect("failed to get buffer").set_text(self.writer_name.unwrap());
         } else {
-            self.text.get_buffer().expect("failed to get buffer").set_text(&*self.value.to_string());
+            self.text.get_buffer().expect("failed to get buffer").set_text(&*(self.value as i32).to_string());
         }
     }
 }

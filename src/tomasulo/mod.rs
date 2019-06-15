@@ -304,6 +304,7 @@ impl TomasuloSimulator {
                         reg3 : r3, 
                         num1 : 0,
                         num2 : 0,
+                        e_time : None, r_time : None, w_time : None,
                     });
                 }
                 "SUB" => { 
@@ -320,6 +321,7 @@ impl TomasuloSimulator {
                         reg3 : r3, 
                         num1 : 0,
                         num2 : 0,
+                        e_time : None, r_time : None, w_time : None,
                     });
                 }
                 "MUL" => { 
@@ -336,6 +338,7 @@ impl TomasuloSimulator {
                         reg3 : r3, 
                         num1 : 0,
                         num2 : 0,
+                        e_time : None, r_time : None, w_time : None,
                     });
                 }
                 "DIV" => { 
@@ -352,6 +355,7 @@ impl TomasuloSimulator {
                         reg3 : r3, 
                         num1 : 0,
                         num2 : 0,
+                        e_time : None, r_time : None, w_time : None,
                     });
                 }
                 "LD" => { 
@@ -365,6 +369,7 @@ impl TomasuloSimulator {
                         reg3 : 0, 
                         num1 : n1,
                         num2 : 0,
+                        e_time : None, r_time : None, w_time : None,
                     });
                 }
                 "JUMP" => { 
@@ -379,6 +384,7 @@ impl TomasuloSimulator {
                         reg3 : 0, 
                         num1 : n1,
                         num2 : n2,
+                        e_time : None, r_time : None, w_time : None,
                     });
                 }
                 _ => { println!("unknown type instruction : {}", line); }
@@ -425,84 +431,47 @@ impl TomasuloSimulator {
             rs.state = RsState::BUSY;
             rs.ui.show_busy(true);
             self.registers[0].set_value_purlly(pc_id as u32 + 1);
-            self.registers[target as usize].set_writer(rs_ref.clone());
-            self.registers[target as usize].writer_name = Some(rs.name);
+            self.registers[target as usize].set_writer(rs_ref.clone(), rs.name);
+            rs.inst_id = pc_id;
             return true;
         }
         false
     }
 
     pub fn step(&mut self) {
+        self.write_back();
         self.times += 1;
 
-        for (pos, res, name) in self.write_back_list.iter() {
-            if !(self.registers[*pos].writer_name.unwrap() == *name) { continue; }
-            if ( *pos == 0 ) && ( *res == 0xFFFF_FFFF ) {
-                self.registers[0].clear_writer();
-                continue;
-            }
-            self.registers[*pos].set_value(*res);
-        }
-        self.write_back_list.clear();
-        for i in 0..6 {
-            let mut rs = self.rs_adders[i].borrow_mut();
-            if rs.state == RsState::CALCULATED {
-                rs.refresh();
-            }
-        }
-        for i in 0..3 {
-            let mut rs = self.rs_multers[i].borrow_mut();
-            if rs.state == RsState::CALCULATED {
-                rs.refresh();
-            }
-        }
-        for i in 0..3 {
-            let mut rs = self.rs_loaders[i].borrow_mut();
-            if rs.state == RsState::CALCULATED {
-                rs.refresh();
-            }
-        }
-
         // 步进运算部件
-        for i in 0..3 {
-            if let Some(info) = self.adders[i].step() {
-                self.write_back_list.push(info);
-            }
-        }
-        for i in 0..2 {
-            if let Some(info) = self.multers[i].step() {
-                self.write_back_list.push(info);
-            }
-        }
-        for i in 0..2 {
-            if let Some(info) = self.loaders[i].step() {
-                self.write_back_list.push(info);
-            }
-        }
+        self.calculate();
 
         // 如果有空闲保留站与当前需要发射的指令相符，则发射一条指令
         println!("current cycle : {}", self.times);
         self.cycle.get_buffer().expect("").set_text(&*self.times.to_string());
+        self.launch();
+        // 遍历保留站，执行可以执行的指令
+        self.visit_rs();
+        self.show_ui();
+        self.show_inst_table();
+    }
+
+    fn launch(&mut self) {
         if !self.registers[0].is_waiting() {
             let pc_id = self.registers[0].get_value() as usize;
-            println!("pc is {}", pc_id);
             if pc_id < self.inst_vec.len() {
                 let _type = self.inst_vec[pc_id].get_type();
+                if self.inst_vec[pc_id].e_time.is_none() {
+                    self.inst_vec[pc_id].e_time = Some(self.times);
+                }
                 match _type {
-                    InstructionType::ADD | InstructionType::SUB => {
+                    InstructionType::ADD | InstructionType::SUB | InstructionType::MUL | InstructionType::DIV => {
                         for i in 0..6 {
-                            if self.handle_adder_rs(i, _type, pc_id) { break; }
-                        }
-                    }
-                    InstructionType::MUL | InstructionType::DIV => {
-                        for i in 0..3 {
                             if self.handle_adder_rs(i, _type, pc_id) { break; }
                         }
                     }
                     InstructionType::LD => {
                         for i in 0..3 {
                             let mut rs = self.rs_loaders[i].borrow_mut();
-                            //if !rs.is_busy() {
                             if rs.state == RsState::FREE {
                                 let number1 = self.inst_vec[pc_id].get_num1().unwrap();
                                 rs.set_source(1, number1);
@@ -510,14 +479,13 @@ impl TomasuloSimulator {
                                 let target = self.inst_vec[pc_id].get_reg1().unwrap() as usize;
                                 rs.set_target(target);
 
-                                //rs.set_busy();
                                 rs.state = RsState::BUSY;
                                 rs.ui.show_busy(true);
                                 self.registers[0]
                                     .set_value_purlly(pc_id as u32 + 1);
                                 self.registers[target]
-                                    .set_writer(self.rs_loaders[i].clone());
-                                self.registers[target as usize].writer_name = Some(rs.name);
+                                    .set_writer(self.rs_loaders[i].clone(), rs.name);
+                                rs.inst_id = pc_id;
                                 break;
                             }
                         }
@@ -525,7 +493,6 @@ impl TomasuloSimulator {
                     InstructionType::JUMP => {
                         for i in 0..6 {
                             let mut rs = self.rs_adders[i].borrow_mut();
-                            //if !rs.is_busy() {  // 有可用的保留站
                             if rs.state == RsState::FREE {
                                 rs.ui.set_op(self.inst_vec[pc_id].get_type());
                                 // 第一个操作数
@@ -545,20 +512,18 @@ impl TomasuloSimulator {
                                 // 跳转的偏移
                                 let number = self.inst_vec[pc_id].get_num2().unwrap();
                                 let new_pc = ( pc_id as i32 + number as i32) as u32;
-                                println!("new pc : {}", new_pc);
                                 rs.set_pc_result(new_pc);
 
                                 rs.set_target(0);
                                 self.registers[0]
-                                    .set_writer(self.rs_adders[i].clone());
+                                    .set_writer(self.rs_adders[i].clone(), rs.name);
                                 self.registers[0]
                                     .set_value_purlly(pc_id as u32 + 1);
-                                self.registers[0].writer_name = Some(rs.name);
 
                                 rs.set_type(self.inst_vec[pc_id].get_type());
-                                //rs.set_busy();
                                 rs.state = RsState::BUSY;
                                 rs.ui.show_busy(true);
+                                rs.inst_id = pc_id;
                                 break;
                             }
                         }
@@ -566,7 +531,9 @@ impl TomasuloSimulator {
                 }
             }
         }
+    }
 
+    fn visit_rs(&mut self) {
         // 遍历保留站，执行可以执行的指令
         for i in 0..6 {
             let mut rs = self.rs_adders[i].borrow_mut();
@@ -622,10 +589,78 @@ impl TomasuloSimulator {
                 }
             }
         }
-
-        self.show_ui();
     }
 
-    pub fn show(&self) {
+    fn write_back(&mut self) {
+        for (pos, res, name) in self.write_back_list.iter() {
+            if self.registers[*pos].writer_name.is_some() && 
+                !(self.registers[*pos].writer_name.unwrap() == *name) { 
+                continue; 
+            }
+            if ( *pos == 0 ) && ( *res == 0xFFFF_FFFF ) {
+                self.registers[0].clear_writer();
+                continue;
+            }
+            self.registers[*pos].set_value(*res);
+        }
+        self.write_back_list.clear();
+        for i in 0..6 {
+            let mut rs = self.rs_adders[i].borrow_mut();
+            if rs.state == RsState::CALCULATED {
+                let id = rs.inst_id;
+                if self.inst_vec[id].r_time.is_none() {
+                    self.inst_vec[id].r_time = Some(self.times);
+                    self.inst_vec[id].w_time = Some(self.times + 1);
+                }
+                rs.refresh();
+            }
+        }
+        for i in 0..3 {
+            let mut rs = self.rs_multers[i].borrow_mut();
+            if rs.state == RsState::CALCULATED {
+                let id = rs.inst_id;
+                if self.inst_vec[id].r_time.is_none() {
+                    self.inst_vec[id].r_time = Some(self.times);
+                    self.inst_vec[id].w_time = Some(self.times + 1);
+                }
+                rs.refresh();
+            }
+        }
+        for i in 0..3 {
+            let mut rs = self.rs_loaders[i].borrow_mut();
+            if rs.state == RsState::CALCULATED {
+                let id = rs.inst_id;
+                if self.inst_vec[id].r_time.is_none() {
+                    self.inst_vec[id].r_time = Some(self.times);
+                    self.inst_vec[id].w_time = Some(self.times + 1);
+                }
+                rs.refresh();
+            }
+        }
+    }
+
+    fn calculate(&mut self) {
+        // 步进运算部件
+        for i in 0..3 {
+            if let Some(info) = self.adders[i].step() {
+                self.write_back_list.push(info);
+            }
+        }
+        for i in 0..2 {
+            if let Some(info) = self.multers[i].step() {
+                self.write_back_list.push(info);
+            }
+        }
+        for i in 0..2 {
+            if let Some(info) = self.loaders[i].step() {
+                self.write_back_list.push(info);
+            }
+        }
+    }
+
+    fn show_inst_table(&self) {
+        for inst in self.inst_vec.iter() {
+            println!("{:?}", inst);
+        }
     }
 }

@@ -23,6 +23,7 @@ pub struct ReservedStation {
     pub ui : Box<dyn ReservedStationDisplay>,   // ui相关成员，用于显示保留站内容
     pub name : &'static str,    // 保留站名称，用于在ui中显示
     res : u32,
+    pub inst_id : usize,
 }
 
 impl ReservedStation {
@@ -37,6 +38,7 @@ impl ReservedStation {
             ui,
             name,
             res : 0,
+            inst_id : 0,
         }
     }
 
