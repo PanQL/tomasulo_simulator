@@ -37,6 +37,7 @@ pub struct TomasuloSimulator {
     rs_loaders : [Arc<RefCell<ReservedStation>>; 3],
     write_back_list : Vec<(usize, u32, &'static str)>,
     cycle : gtk::TextView,
+    number : u32,
 }
 
 impl TomasuloSimulator {
@@ -272,6 +273,7 @@ impl TomasuloSimulator {
             ],
             write_back_list : Vec::new(),
             cycle : builder.get_object("cycle").expect("Could not get cycle"),
+            number : 0,
         }
     }
 
@@ -451,8 +453,8 @@ impl TomasuloSimulator {
         self.launch();
         // 遍历保留站，执行可以执行的指令
         self.visit_rs();
-        self.show_ui();
-        self.show_inst_table();
+        //self.show_ui();
+        //self.show_inst_table();
     }
 
     fn launch(&mut self) {
@@ -464,8 +466,13 @@ impl TomasuloSimulator {
                     self.inst_vec[pc_id].e_time = Some(self.times);
                 }
                 match _type {
-                    InstructionType::ADD | InstructionType::SUB | InstructionType::MUL | InstructionType::DIV => {
+                    InstructionType::ADD | InstructionType::SUB => {
                         for i in 0..6 {
+                            if self.handle_adder_rs(i, _type, pc_id) { break; }
+                        }
+                    }
+                    InstructionType::MUL | InstructionType::DIV => {
+                        for i in 0..3 {
                             if self.handle_adder_rs(i, _type, pc_id) { break; }
                         }
                     }
@@ -611,6 +618,7 @@ impl TomasuloSimulator {
                 if self.inst_vec[id].r_time.is_none() {
                     self.inst_vec[id].r_time = Some(self.times);
                     self.inst_vec[id].w_time = Some(self.times + 1);
+                    self.number += 1;
                 }
                 rs.refresh();
             }
@@ -622,6 +630,7 @@ impl TomasuloSimulator {
                 if self.inst_vec[id].r_time.is_none() {
                     self.inst_vec[id].r_time = Some(self.times);
                     self.inst_vec[id].w_time = Some(self.times + 1);
+                    self.number += 1;
                 }
                 rs.refresh();
             }
@@ -633,6 +642,7 @@ impl TomasuloSimulator {
                 if self.inst_vec[id].r_time.is_none() {
                     self.inst_vec[id].r_time = Some(self.times);
                     self.inst_vec[id].w_time = Some(self.times + 1);
+                    self.number += 1;
                 }
                 rs.refresh();
             }
@@ -658,9 +668,13 @@ impl TomasuloSimulator {
         }
     }
 
-    fn show_inst_table(&self) {
+    pub fn show_inst_table(&self) {
         for inst in self.inst_vec.iter() {
             println!("{:?}", inst);
         }
+    }
+
+    pub fn still(&self) -> bool {
+        self.number <= self.inst_vec.len() as u32
     }
 }

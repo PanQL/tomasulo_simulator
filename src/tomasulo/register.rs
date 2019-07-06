@@ -65,10 +65,10 @@ impl Register {
     }
 
     pub fn show(&self) {
-        if self.writer_name.is_some() {
-            self.text.get_buffer().expect("failed to get buffer").set_text(self.writer_name.unwrap());
-        } else {
-            self.text.get_buffer().expect("failed to get buffer").set_text(&*(self.value as i32).to_string());
-        }
+        //if self.writer_name.is_some() {
+            //self.text.get_buffer().expect("failed to get buffer").set_text(self.writer_name.unwrap());
+        //} else {
+            //self.text.get_buffer().expect("failed to get buffer").set_text(&*(self.value as i32).to_string());
+        //}
     }
 }

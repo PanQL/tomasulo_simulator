@@ -38,22 +38,22 @@ pub struct CalculatorRsUi {
 
 impl ReservedStationDisplay for LoaderBufferUi {
     fn show_busy(&self, busy: bool) {
-        if busy {
-            self.busy.get_buffer().expect("failed to get load buffer").set_text("Yes");
-        } else {
-            self.busy.get_buffer().expect("failed to get load buffer").set_text("No");
-        }
+        //if busy {
+            //self.busy.get_buffer().expect("failed to get load buffer").set_text("Yes");
+        //} else {
+            //self.busy.get_buffer().expect("failed to get load buffer").set_text("No");
+        //}
     }
 
     fn set_op(&self, _ : InstructionType) {
     }
 
     fn show_vj(&self, vj: Option<&u32>) {
-        if vj.is_some() {
-            self.value.get_buffer().expect("failed to get load value").set_text(&*(*vj.unwrap() as i32).to_string());
-        } else {
-            self.value.get_buffer().expect("failed to get load value").set_text("");
-        }
+        //if vj.is_some() {
+            //self.value.get_buffer().expect("failed to get load value").set_text(&*(*vj.unwrap() as i32).to_string());
+        //} else {
+            //self.value.get_buffer().expect("failed to get load value").set_text("");
+        //}
     }
 
     fn show_vk(&self, _ : Option<&u32>) {
@@ -66,18 +66,18 @@ impl ReservedStationDisplay for LoaderBufferUi {
     }
 
     fn clear(&self) {
-        self.busy.get_buffer().expect("failed to get load buffer").set_text("No");
-        self.value.get_buffer().expect("failed to get load value").set_text("");
+        //self.busy.get_buffer().expect("failed to get load buffer").set_text("No");
+        //self.value.get_buffer().expect("failed to get load value").set_text("");
     }
 }
 
 impl ReservedStationDisplay for CalculatorRsUi {
     fn show_busy(&self, busy: bool) {
-        if busy {
-            self.busy.get_buffer().expect("failed to get load buffer").set_text("Yes");
-        } else {
-            self.busy.get_buffer().expect("failed to get load buffer").set_text("No");
-        }
+        //if busy {
+            //self.busy.get_buffer().expect("failed to get load buffer").set_text("Yes");
+        //} else {
+            //self.busy.get_buffer().expect("failed to get load buffer").set_text("No");
+        //}
     }
 
     fn set_op(&self, op_type: InstructionType) {
@@ -89,40 +89,40 @@ impl ReservedStationDisplay for CalculatorRsUi {
             InstructionType::JUMP => "JUMP",
             _ => ""
         };
-        self.op.get_buffer().expect("failed to get calculator op ui").set_text(s);
+        //self.op.get_buffer().expect("failed to get calculator op ui").set_text(s);
     }
 
     fn show_vj(&self, vj: Option<&u32>) {
-        if vj.is_some() {
-            self.vj.get_buffer().expect("failed to get load value").set_text(&*(*vj.unwrap() as i32).to_string());
-        } else {
-            self.vj.get_buffer().expect("failed to get load value").set_text("");
-        }
+        //if vj.is_some() {
+            //self.vj.get_buffer().expect("failed to get load value").set_text(&*(*vj.unwrap() as i32).to_string());
+        //} else {
+            //self.vj.get_buffer().expect("failed to get load value").set_text("");
+        //}
     }
 
     fn show_vk(&self, vk: Option<&u32>) {
-        if vk.is_some() {
-            self.vk.get_buffer().expect("failed to get load value").set_text(&*(*vk.unwrap() as i32).to_string());
-        } else {
-            self.vk.get_buffer().expect("failed to get load value").set_text("");
-        }
+        //if vk.is_some() {
+            //self.vk.get_buffer().expect("failed to get load value").set_text(&*(*vk.unwrap() as i32).to_string());
+        //} else {
+            //self.vk.get_buffer().expect("failed to get load value").set_text("");
+        //}
     }
 
     fn show_qj(&self, qj: &str) {
-        self.qj.get_buffer().expect("failed to get load value").set_text(qj);
+        //self.qj.get_buffer().expect("failed to get load value").set_text(qj);
     }
 
     fn show_qk(&self, qk: &str) {
-        self.qk.get_buffer().expect("failed to get load value").set_text(qk);
+        //self.qk.get_buffer().expect("failed to get load value").set_text(qk);
     }
 
     fn clear(&self) {
-        self.busy.get_buffer().expect("failed to get load buffer").set_text("No");
-        self.op.get_buffer().expect("failed to get calculator op ui").set_text("");
-        self.vj.get_buffer().expect("failed to get load value").set_text("");
-        self.vk.get_buffer().expect("failed to get load value").set_text("");
-        self.qj.get_buffer().expect("failed to get load value").set_text("");
-        self.qk.get_buffer().expect("failed to get load value").set_text("");
+        //self.busy.get_buffer().expect("failed to get load buffer").set_text("No");
+        //self.op.get_buffer().expect("failed to get calculator op ui").set_text("");
+        //self.vj.get_buffer().expect("failed to get load value").set_text("");
+        //self.vk.get_buffer().expect("failed to get load value").set_text("");
+        //self.qj.get_buffer().expect("failed to get load value").set_text("");
+        //self.qk.get_buffer().expect("failed to get load value").set_text("");
     }
 }
 
@@ -143,33 +143,33 @@ pub struct CalculatorUi {
 
 impl CalculatorDisplay for LoaderUi {
     fn show_times(&self, times: &u32) {
-        self.times.get_buffer().expect("failed to get load buffer").set_text(&*times.to_string());
+        //self.times.get_buffer().expect("failed to get load buffer").set_text(&*times.to_string());
     }
 
     fn set_op(&self, _ : InstructionType) {
     }
 
     fn show_src1(&self, src1: &u32) {
-        self.value.get_buffer().expect("failed to get load buffer").set_text(&*(*src1 as i32).to_string());
+        //self.value.get_buffer().expect("failed to get load buffer").set_text(&*(*src1 as i32).to_string());
     }
 
     fn show_src2(&self, _ : &u32) {
     }
 
     fn show_target(&self, target: &usize) {
-        self.target.get_buffer().expect("failed to get load buffer").set_text(&*target.to_string());
+        //self.target.get_buffer().expect("failed to get load buffer").set_text(&*target.to_string());
     }
 
     fn clear(&self) {
-        self.target.get_buffer().expect("failed to get load buffer").set_text("");
-        self.times.get_buffer().expect("failed to get load buffer").set_text("");
-        self.value.get_buffer().expect("failed to get load buffer").set_text("");
+        //self.target.get_buffer().expect("failed to get load buffer").set_text("");
+        //self.times.get_buffer().expect("failed to get load buffer").set_text("");
+        //self.value.get_buffer().expect("failed to get load buffer").set_text("");
     }
 }
 
 impl CalculatorDisplay for CalculatorUi {
     fn show_times(&self, times: &u32) {
-        self.times.get_buffer().expect("failed to get load buffer").set_text(&*times.to_string());
+        //self.times.get_buffer().expect("failed to get load buffer").set_text(&*times.to_string());
     }
 
     fn set_op(&self, op_type: InstructionType) {
@@ -181,26 +181,26 @@ impl CalculatorDisplay for CalculatorUi {
             InstructionType::JUMP => "JUMP",
             _ => ""
         };
-        self.op.get_buffer().expect("failed to get calculator op ui").set_text(s);
+        //self.op.get_buffer().expect("failed to get calculator op ui").set_text(s);
     }
 
     fn show_src1(&self, src1: &u32) {
-        self.value1.get_buffer().expect("failed to get load buffer").set_text(&*(*src1 as i32).to_string());
+        //self.value1.get_buffer().expect("failed to get load buffer").set_text(&*(*src1 as i32).to_string());
     }
 
     fn show_src2(&self, src2: &u32) {
-        self.value2.get_buffer().expect("failed to get load buffer").set_text(&*(*src2 as i32).to_string());
+        //self.value2.get_buffer().expect("failed to get load buffer").set_text(&*(*src2 as i32).to_string());
     }
 
     fn show_target(&self, target: &usize) {
-        self.target.get_buffer().expect("failed to get load buffer").set_text(&*target.to_string());
+        //self.target.get_buffer().expect("failed to get load buffer").set_text(&*target.to_string());
     }
 
     fn clear(&self) {
-        self.target.get_buffer().expect("failed to get load buffer").set_text("");
-        self.times.get_buffer().expect("failed to get load buffer").set_text("");
-        self.op.get_buffer().expect("failed to get calculator op ui").set_text("");
-        self.value1.get_buffer().expect("failed to get load buffer").set_text("");
-        self.value2.get_buffer().expect("failed to get load buffer").set_text("");
+        //self.target.get_buffer().expect("failed to get load buffer").set_text("");
+        //self.times.get_buffer().expect("failed to get load buffer").set_text("");
+        //self.op.get_buffer().expect("failed to get calculator op ui").set_text("");
+        //self.value1.get_buffer().expect("failed to get load buffer").set_text("");
+        //self.value2.get_buffer().expect("failed to get load buffer").set_text("");
     }
 }

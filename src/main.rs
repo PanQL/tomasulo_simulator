@@ -27,6 +27,13 @@ fn main() {
     tomasulo.load_nel(&args[1]);
 
     let simulator = Arc::new(RefCell::new(tomasulo));
+    {
+        let mut simu = simulator.borrow_mut();
+        while simu.still() {
+            simu.step();
+        }
+        simu.show_inst_table();
+    }
     step.connect_clicked(move |_| {
        simulator.borrow_mut().step();
     });
